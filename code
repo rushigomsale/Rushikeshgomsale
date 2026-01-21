@@ -1,0 +1,144 @@
+#include <iostream>
+#include <fstream>
+#include <ctime>
+#include <cstdlib>
+using namespace std;
+
+string generateStrongPassword(int length) {
+    string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789@#$%&*";
+    string password = "";
+    for (int i = 0; i < length; i++) {
+        password += chars[rand() % chars.length()];
+    }
+    return password;
+}
+
+bool isStrongPassword(string pass) {
+    bool upper=false, lower=false, digit=false, symbol=false;
+    if (pass.length() < 8) return false;
+
+    for (char c : pass) {
+        if (isupper(c)) upper = true;
+        else if (islower(c)) lower = true;
+        else if (isdigit(c)) digit = true;
+        else symbol = true;
+    }
+    return upper && lower && digit && symbol;
+}
+
+int hashPassword(string pass) {
+    int hash = 0;
+    for (char c : pass) hash += c;
+    return hash;
+}
+
+int saltedHash(string pass, string salt) {
+    int hash = 0;
+    for (char c : pass + salt) hash += c;
+    return hash;
+}
+
+int generateOTP() {
+    return rand() % 9000 + 1000;
+}
+
+void saveUser(string username, int hash) {
+    ofstream file("users.txt", ios::app);
+    file << username << " " << hash << endl;
+    file.close();
+}
+
+bool verifyUser(string username, int hash) {
+    ifstream file("users.txt");
+    string u;
+    int h;
+
+    while (file >> u >> h) {
+        if (u == username && h == hash)
+            return true;
+    }
+    return false;
+}
+
+int main() {
+    srand(time(0));
+
+    int choice;
+    string username, password, salt="A9@3";
+
+    cout << "1. Register\n2. Login\n3. Forgot Password\n4. Admin Panel\nChoose: ";
+    cin >> choice;
+
+    if (choice == 1) {
+        cout << "Enter Username: ";
+        cin >> username;
+
+        cout << "Enter Password: ";
+        cin >> password;
+
+        if (!isStrongPassword(password)) {
+            cout << "Weak Password\n";
+            return 0;
+        }
+
+        int hash = saltedHash(password, salt);
+        saveUser(username, hash);
+
+        cout << "Registration Successful\n";
+    }
+
+    else if (choice == 2) {
+        int attempts = 3;
+
+        while (attempts--) {
+            cout << "Enter Username: ";
+            cin >> username;
+            cout << "Enter Password: ";
+            cin >> password;
+
+            int hash = saltedHash(password, salt);
+
+            if (verifyUser(username, hash)) {
+                int otp = generateOTP();
+                cout << "OTP: " << otp << endl;
+
+                int userOTP;
+                cout << "Enter OTP: ";
+                cin >> userOTP;
+
+                if (otp == userOTP) {
+                    cout << "Login Successful\n";
+                    return 0;
+                }
+            }
+
+            cout << "Invalid Credentials\n";
+        }
+
+        cout << "Account Locked\n";
+    }
+
+    else if (choice == 3) {
+        cout << "Enter Username: ";
+        cin >> username;
+
+        string newPass = generateStrongPassword(10);
+        int newHash = saltedHash(newPass, salt);
+
+        saveUser(username, newHash);
+        cout << "New Password: " << newPass << endl;
+    }
+
+    else if (choice == 4) {
+        ifstream file("users.txt");
+        string u;
+        int h;
+
+        while (file >> u >> h) {
+            cout << u << " " << h << endl;
+        }
+        file.close();
+    }
+
+    return 0;
+}
